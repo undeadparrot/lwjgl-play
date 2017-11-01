@@ -8,7 +8,7 @@ import org.lwjgl.opengl.GL20.*
 import org.lwjgl.opengl.GL30.glBindVertexArray
 import org.lwjgl.opengl.GL30.glGenVertexArrays
 import org.lwjgl.system.MemoryUtil.*
-import org.joml.Matrix4f;
+import org.joml.Matrix4f
 import org.joml.Vector3f
 import org.lwjgl.BufferUtils
 
@@ -52,7 +52,7 @@ fun main(args: Array<String>) {
     val trackball = TrackballManipulator(0, 0)
     glfwSetKeyCallback(window, { _window, key, scancode, action, mods ->
         if (key == GLFW_KEY_ESCAPE) {
-            println("Naat")
+            gamestate.isRunning = false
         }
         when (key) {
             GLFW_KEY_W -> gamestate.camPosition.z -= 0.1f
@@ -62,8 +62,8 @@ fun main(args: Array<String>) {
             GLFW_KEY_F -> gamestate.camPosition.y -= 0.1f
             GLFW_KEY_R -> gamestate.camPosition.y += 0.1f
         }
+        trackball.onKeyCallback(key, scancode, action, mods)
     })
-    glfwSetKeyCallback(window, { _, key, scancode, action, mods -> trackball.onKeyCallback(key, scancode, action, mods) })
     glfwSetMouseButtonCallback(window, { _, button, action, mods -> trackball.onMouseButtonCallback(button, action) })
     glfwSetCursorPosCallback(window, { _, xpos, ypos -> trackball.onMousePosCallback(xpos, ypos) })
     glfwSetScrollCallback(window, { _, xoffset, yoffset -> trackball.onScroll(xoffset, yoffset) })
@@ -73,11 +73,11 @@ fun main(args: Array<String>) {
 
     println("Running")
 
-    GL.createCapabilities();
+    GL.createCapabilities()
     glClearColor(0.1f, 0.3f, 0.3f, 1f)
     var shaderProg: ShaderProgram? = null
     val gui = Gui(gamestate)
-    val renderables = mutableListOf<IRenderable>();
+    val renderables = mutableListOf<IRenderable>()
     val debugger: LineDebugRenderable
 //    gui.isVisible = true
     try {
@@ -109,10 +109,10 @@ fun main(args: Array<String>) {
             debugger.addLine(Vector3f(0F,0F,0F), Vector3f(0f,100f,0f))
             debugger.addLine(Vector3f(0F,0F,0F),Vector3f(100f,0f,0f))
             debugger.addLine(Vector3f(0F,0F,0F),Vector3f(0f,0f,100f))
-            renderables[0]?.renderNormals(debugger)
+            renderables[0].renderNormals(debugger)
             renderables.forEach { x-> x.render(mView,mPerspective) }
 
-            glfwSwapBuffers(window); // swap the color buffers
+            glfwSwapBuffers(window) // swap the color buffers
             glfwPollEvents()
         }
 
@@ -121,18 +121,18 @@ fun main(args: Array<String>) {
         renderables.forEach { x -> x.cleanup();renderables.remove(x) }
         glfwTerminate()
         glfwSetErrorCallback(null).free()
-        gui.dispose()
     }
+    System.exit(0)
 }
 
 private fun setupWindow(WIDTH: Int, HEIGHT: Int): Long {
-    glfwDefaultWindowHints(); // optional, the current window hints are already the default
-    glfwWindowHint(GLFW_VISIBLE, GL_FALSE); // the window will stay hidden after creation
-    glfwWindowHint(GLFW_RESIZABLE, GL_TRUE); // the window will be resizable
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+    glfwDefaultWindowHints() // optional, the current window hints are already the default
+    glfwWindowHint(GLFW_VISIBLE, GL_FALSE) // the window will stay hidden after creation
+    glfwWindowHint(GLFW_RESIZABLE, GL_TRUE) // the window will be resizable
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3)
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2)
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE)
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE)
     val window = glfwCreateWindow(WIDTH, HEIGHT, "Gentle and Smol", NULL, NULL)
     if (window == NULL) {
         throw RuntimeException("Failed to open a window")
