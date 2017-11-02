@@ -13,7 +13,17 @@ import org.lwjgl.opengl.GL30.glDeleteVertexArrays
 import org.lwjgl.system.MemoryUtil
 
 class Md5Renderable(val model:Md5Loader, val animator:Md5AnimLoader, val shaderProgram:ShaderProgram) : IRenderable {
-    override fun renderNormals(debugger: LineDebugRenderable) {}
+    override fun renderNormals(debugger: LineDebugRenderable) {
+        for (mesh in model.meshes) {
+            for ((i, vert) in mesh.verts.withIndex()) {
+                val pos = mesh.getVertexPosition(model.bindposeJoints, i)
+                debugger.addLine(
+                        pos,
+                        Vector3f(pos).sub(Vector3f(vert.bindposeNormal).mul(0.5f))
+                )
+            }
+        }
+    }
 
     var va: Int =0
     var vb: Int =0
@@ -37,7 +47,8 @@ class Md5Renderable(val model:Md5Loader, val animator:Md5AnimLoader, val shaderP
         Matrix4f().mul(perspectiveMatrix).mul(viewMatrix).get(fb)
 
 
-        val joints = animator.getAllJointsForFrame(0)
+//        val joints = animator.getAllJointsForFrame(0)
+        val joints = model.bindposeJoints
         val vertvalues = model.meshes.flatMap { m ->
             m.getOrderedVerticesFromTris(joints).flatMap { v3 ->
                 listOf(v3.x, v3.y, v3.z)

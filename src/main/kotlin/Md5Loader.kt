@@ -4,12 +4,17 @@ import java.io.File
 
 class Md5Loader {
     val meshes = mutableListOf<Mesh>()
-    val joints = mutableListOf<Joint>()
+    val bindposeJoints = mutableListOf<Joint>()
     private var sectionFunc = { x: String -> processTopLevel(x) }
 
     constructor(fname: String) {
         val reader = File(fname).forEachLine { line -> sectionFunc(line.trim().replace('\t',' ')) }
+        meshes.forEach {
+            it.calculateTriangleNormals(bindposeJoints)
+            it.calculateBindposeWeightNormals(bindposeJoints)
+        }
     }
+
 
     private fun processTopLevel(line: String) {
         if (line.isNullOrBlank()) {
@@ -22,7 +27,7 @@ class Md5Loader {
                 meshes.add(mesh)
                 sectionFunc = { s -> processMesh(mesh, s) }
             }
-            "joints" -> sectionFunc = { s -> processJoints(s) }
+            "bindposeJoints" -> sectionFunc = { s -> processJoints(s) }
         }
     }
 
@@ -61,7 +66,7 @@ class Md5Loader {
             sectionFunc = { x: String -> processTopLevel(x) }
         } else {
 
-            joints.add(Joint(
+            bindposeJoints.add(Joint(
                     name = tokens[0],
                     parent = tokens[1],
                     pos = Vector3f(tokens[3].toFloat(), tokens[4].toFloat(), tokens[5].toFloat()),
@@ -78,10 +83,14 @@ class Md5Loader {
     }
 }
 
-data class Vert(val startWeight: Int, val countWeights: Int) {}
-data class Weight(val jointIndex: Int, val bias: Float, val pos: Vector3f) {}
-data class Tri(val vertIndexes: Array<Int>) {}
-data class Joint(val name: String = "unknown", val parent: String = "unknown", val pos: Vector3f, val orient: Quaternionf) {}
+data class Vert(val startWeight: Int, val countWeights: Int, var bindposeNormal: Vector3f = Vector3f())
+data class Weight(val jointIndex: Int, val bias: Float, val pos: Vector3f)
+data class Tri(val vertIndexes: Array<Int>) {
+    var centroid: Vector3f = Vector3f()
+    var normal: Vector3f = Vector3f()
+}
+
+data class Joint(val name: String = "unknown", val parent: String = "unknown", val pos: Vector3f, val orient: Quaternionf)
 
 class Mesh {
     var shader = "Unknown"
@@ -118,6 +127,34 @@ class Mesh {
         }
     }
 
+    fun calculateTriangleNormals(bindposeJoints: List<Joint>) {
+        tris.forEach {
+            val v1 = getVertexPosition(bindposeJoints, it.vertIndexes[0])
+            val v2 = getVertexPosition(bindposeJoints, it.vertIndexes[1])
+            val v3 = getVertexPosition(bindposeJoints, it.vertIndexes[2])
+            //calculate centre by averaging x,y,z coords
+            it.centroid = Vector3f(v1).add(v2).add(v3).div(3f)
+            //calculate normals
+            it.normal = Vector3f(v2).sub(v1).cross(Vector3f(v3).sub(v1)).normalize()
+        }
+    }
+
+    fun calculateBindposeWeightNormals(bindposeJoints: List<Joint>) {
+        val vertTriNormals = mutableMapOf<Int, MutableList<Vector3f>>()
+        tris.forEach {
+            with(vertTriNormals) {
+                getOrPut(it.vertIndexes[0], { mutableListOf<Vector3f>() }).add(it.normal)
+                getOrPut(it.vertIndexes[1], { mutableListOf<Vector3f>() }).add(it.normal)
+                getOrPut(it.vertIndexes[2], { mutableListOf<Vector3f>() }).add(it.normal)
+            }
+        }
+        vertTriNormals.forEach { vertIndex, normals ->
+            verts[vertIndex].bindposeNormal =
+                    normals.reduce(Vector3f::add)
+                            .div(normals.size.toFloat())
+                            .normalize()
+        }
+    }
 }
 fun makeQuaternion(x: Float, y: Float, z: Float): Quaternionf {
     val t = 1.0 - (x * x) - (y * y) - (z * z)

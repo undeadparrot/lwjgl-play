@@ -4,7 +4,7 @@ commandline "Exported from Blender by io_export_md5.py by Paul Zirkle"
 numJoints 33
 numMeshes 6
 
-joints {
+bindposeJoints {
 	"origin"	-1 ( -0.000000 0.001643 -0.000604 ) ( -0.707107 -0.000242 -0.707107 )		// 
 	"sheath"	0 ( 1.100481 -0.317714 3.170247 ) ( 0.307041 -0.578615 0.354181 )		// origin
 	"sword"	1 ( 0.980960 -0.936157 4.075372 ) ( 0.305556 -0.578156 0.353505 )		// sheath

@@ -4,7 +4,7 @@ commandline "mesh models/monsters/hellknight/cycles/hellknight_mesh.mb -dest mod
 numJoints 110
 numMeshes 4
 
-joints {
+bindposeJoints {
 	"origin"	-1 ( 0 0 0 ) ( -0.7071067095 0 0 )		// 
 	"body"	0 ( 0 0.0000047749 80.1090087891 ) ( -0.7071067095 0 0 )		// origin
 	"body2"	1 ( 0 0.0138006303 80.162979126 ) ( -0.7071067095 0 0 )		// body

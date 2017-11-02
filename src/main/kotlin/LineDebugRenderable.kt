@@ -22,7 +22,7 @@ class LineDebugRenderable:IRenderable {
     val data = mutableListOf<Float>()
     constructor() {
 
-        this.shaderProgram = ShaderProgram.fromFilename("basic.v.glsl","basic.f.glsl")
+        this.shaderProgram = ShaderProgram.fromFilename("basic.v.glsl", "debug.f.glsl")
 
         this.va = GL30.glGenVertexArrays()
         GL30.glBindVertexArray(this.va)

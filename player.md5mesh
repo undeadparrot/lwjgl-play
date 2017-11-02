@@ -4,7 +4,7 @@ commandline "mesh models/characters/player/mocap/idle_stand.mb -dest models/md5/
 numJoints 109
 numMeshes 15
 
-joints {
+bindposeJoints {
 	"origin"	-1 ( 0 0 0 ) ( -0.7071067095 0 0 )		// 
 	"Body"	0 ( 0 0.000002651 44.4758720398 ) ( 0.5991385579 0.7640674114 -0.1625256389 )		// origin
 	"Body2"	1 ( 0.0549236722 -0.1912643015 45.0571403503 ) ( 0.6171841621 0.7392068505 -0.2413620353 )		// Body
