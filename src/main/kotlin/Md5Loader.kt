@@ -27,7 +27,7 @@ class Md5Loader {
                 meshes.add(mesh)
                 sectionFunc = { s -> processMesh(mesh, s) }
             }
-            "bindposeJoints" -> sectionFunc = { s -> processJoints(s) }
+            "joints" -> sectionFunc = { s -> processJoints(s) }
         }
     }
 
@@ -89,7 +89,6 @@ data class Tri(val vertIndexes: Array<Int>) {
     var centroid: Vector3f = Vector3f()
     var normal: Vector3f = Vector3f()
 }
-
 data class Joint(val name: String = "unknown", val parent: String = "unknown", val pos: Vector3f, val orient: Quaternionf)
 
 class Mesh {
