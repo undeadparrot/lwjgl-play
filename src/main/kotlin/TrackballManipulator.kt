@@ -37,7 +37,6 @@ class TrackballManipulator(var mousex: Int, var mousey: Int) : IManipulator {
         this.mousey= ypos.toInt()
 
         if(isMouseLDown){
-            System.out.println("Dragging ${offsetx} ${offsety}")
             velocity.add((offsetx/15f).toFloat(),(offsety/15f).toFloat())
         }
     }

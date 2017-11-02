@@ -13,19 +13,19 @@ import org.joml.Vector3f
 import org.lwjgl.BufferUtils
 
 
-val obj = ObjLoader("cow2.obj")
+//val obj = ObjLoader("cow2.obj")
 //val bob = Md5Loader("player.md5mesh")
 //val anim = Md5AnimLoader("walk1.md5anim")
-//val joints = bob.joints
+//val bindposeJoints = bob.bindposeJoints
 //val vertvalues = obj.getOrderedVerts().toFloatArray()
 
 //val anim = Md5AnimLoader("bob_lamp.md5anim")
 //val vertvalues = anim.getDebugVertices(0).toFloatArray()
 
 //val bob = Md5Loader("bob_lamp.md5mesh")
-//val joints = anim.getAllJointsForFrame(0)
+//val bindposeJoints = anim.getAllJointsForFrame(0)
 //val vertvalues = bob.meshes.flatMap {
-//        m->m.getOrderedVerticesFromTris(joints).flatMap {
+//        m->m.getOrderedVerticesFromTris(bindposeJoints).flatMap {
 //        v3-> listOf(v3.x,v3.y,v3.z)
 //    }
 //}.toFloatArray()
@@ -34,16 +34,16 @@ val primitive = GL_TRIANGLES
 
 val FOV: Float = (Math.toRadians(60.0).toFloat())
 val Z_NEAR = 0.01f
-val Z_FAR = 1000f
+val Z_FAR = 2000f
 
-val anim = Md5AnimLoader("bob_lamp.md5anim")
-val bob = Md5Loader("bob_lamp.md5mesh")
+val anim = Md5AnimLoader("scarry.md5anim")
+val bob = Md5Loader("scarry.md5mesh")
 
 fun main(args: Array<String>) {
     val gamestate = GameState()
     GLFWErrorCallback.createPrint(System.err).set()
-    val WIDTH = 300
-    val HEIGHT = 300
+    val WIDTH = 800
+    val HEIGHT = 800
     if (!glfwInit()) {
         throw IllegalStateException("Unable to initialize GLFW")
     }
@@ -73,10 +73,11 @@ fun main(args: Array<String>) {
 
     println("Running")
 
-    GL.createCapabilities()
+    val capabilities = GL.createCapabilities()
     glClearColor(0.1f, 0.3f, 0.3f, 1f)
+    glEnable(GL_DEPTH_TEST)
     var shaderProg: ShaderProgram? = null
-    val gui = Gui(gamestate)
+//    val gui = Gui(gamestate)
     val renderables = mutableListOf<IRenderable>()
     val debugger: LineDebugRenderable
 //    gui.isVisible = true
@@ -92,7 +93,7 @@ fun main(args: Array<String>) {
         while (!glfwWindowShouldClose(window) && gamestate.isRunning) {
 
             val deltaTime = glfwGetTime() - time
-            frame += 0.1
+            frame += 0.5
             if (frame > 119) {
                 frame = 0.01
             }
@@ -109,8 +110,8 @@ fun main(args: Array<String>) {
             debugger.addLine(Vector3f(0F,0F,0F), Vector3f(0f,100f,0f))
             debugger.addLine(Vector3f(0F,0F,0F),Vector3f(100f,0f,0f))
             debugger.addLine(Vector3f(0F,0F,0F),Vector3f(0f,0f,100f))
-            renderables[0].renderNormals(debugger)
-            renderables.forEach { x-> x.render(mView,mPerspective) }
+            renderables[0].renderNormals(debugger, frame.toInt())
+            renderables.forEach { x -> x.render(mView, mPerspective, frame.toInt()) }
 
             glfwSwapBuffers(window) // swap the color buffers
             glfwPollEvents()

@@ -11,12 +11,28 @@ import org.lwjgl.opengl.GL30
 import org.lwjgl.opengl.GL30.glBindVertexArray
 import org.lwjgl.opengl.GL30.glDeleteVertexArrays
 import org.lwjgl.system.MemoryUtil
+import java.nio.FloatBuffer
+import java.util.*
 
 class Md5Renderable(val model:Md5Loader, val animator:Md5AnimLoader, val shaderProgram:ShaderProgram) : IRenderable {
-    override fun renderNormals(debugger: LineDebugRenderable) {}
+    override fun renderNormals(debugger: LineDebugRenderable, frame: Int) {
+        val joints = animator.getAllJointsForFrame(frame)
+        for (mesh in model.meshes) {
+            for (vert in anim.getOrderedVerticesWithNormalsFromTris(mesh, joints, model.bindposeJoints, frame)) {
+                val pos = vert.pos
+                val normal = vert.normal
+                debugger.addLine(
+                        pos,
+                        Vector3f(pos).sub(Vector3f(normal).mul(0.2f))
+                )
+            }
+        }
+    }
 
     var va: Int =0
     var vb: Int =0
+    private var vertices: FloatBuffer
+
     init {
 
 
@@ -30,20 +46,23 @@ class Md5Renderable(val model:Md5Loader, val animator:Md5AnimLoader, val shaderP
         glEnableVertexAttribArray(position)
         glVertexAttribPointer(position, 3, GL_FLOAT, false, 0, 0)
 
+        vertices = MemoryUtil.memAllocFloat(model.meshes.flatMap { it.getOrderedVerticesFromTris(model.bindposeJoints) }.size * 3)
+
     }
-    override fun render(viewMatrix:Matrix4f,perspectiveMatrix: Matrix4f){
+
+    override fun render(viewMatrix: Matrix4f, perspectiveMatrix: Matrix4f, frame: Int) {
         val projectionMatrixUniform = glGetUniformLocation(shaderProgram.program, "projectionMatrix")
         val fb = BufferUtils.createFloatBuffer(16)
         Matrix4f().mul(perspectiveMatrix).mul(viewMatrix).get(fb)
 
 
-        val joints = animator.getAllJointsForFrame(0)
+        val joints = animator.getAllJointsForFrame(frame)
+//        val joints = model.bindposeJoints
         val vertvalues = model.meshes.flatMap { m ->
-            m.getOrderedVerticesFromTris(joints).flatMap { v3 ->
-                listOf(v3.x, v3.y, v3.z)
+            animator.getOrderedVerticesWithNormalsFromTris(m, joints, bindposeJoints = model.bindposeJoints, frameIndex = frame).flatMap { v ->
+                listOf(v.pos.x, v.pos.y, v.pos.z)
             }
         }.toFloatArray()
-        val vertices = MemoryUtil.memAllocFloat(vertvalues.size)
         vertices.put(vertvalues).flip()
         glUseProgram(shaderProgram.program)
         GL15.glBufferData(GL_ARRAY_BUFFER, vertices, GL15.GL_STATIC_DRAW)
