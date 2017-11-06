@@ -1,5 +1,7 @@
+import org.joml.Matrix4f
 import org.joml.Quaternionf
 import org.joml.Vector3f
+import org.joml.Vector4f
 import java.io.File
 import kotlin.experimental.and
 
@@ -44,6 +46,7 @@ class Md5AnimLoader {
             ))
         }
     }
+
     private fun processBaseframe(line: String) {
 
         val tokens = line.split(" ")
@@ -56,22 +59,23 @@ class Md5AnimLoader {
                     ),
                     orient = makeQuaternion(
                             tokens[6].toFloat(),tokens[7].toFloat(),tokens[8].toFloat()
-                    )
+                    ),
+                    invMatrix = null
             ))
         }
     }
 
 
-    private fun processDataframe(frame:MutableList<Float>,line: String) {
-         val tokens = line.split(" ")
+    private fun processDataframe(frame:MutableList<Float>, line: String) {
+        val tokens = line.split(" ")
         if (tokens[0].contains("}")) {
             sectionFunc = { x: String -> processTopLevel(x) }
         } else {
-            frame.addAll(tokens.map{x->x.toFloat()})
+            frame.addAll(tokens.map{ x->x.toFloat()})
         }
     }
 
-    fun getJointForFrame(jointIndex:Int,frameIndex:Int): Joint {
+    fun getJointForFrame(jointIndex:Int, frameIndex:Int): Joint {
         val key = Pair(jointIndex,frameIndex)
         val joint = hierarchy[jointIndex]
         return cache.getOrPut(key,{
@@ -83,25 +87,63 @@ class Md5AnimLoader {
     }
 
     fun getAllJointsForFrame(frameIndex: Int): List<Joint>{
-        return hierarchy.withIndex().map{(i, _)->getJointForFrame(i,frameIndex)}
+        return hierarchy.withIndex().map{ (i, _)->getJointForFrame(i,frameIndex)}
     }
 
+    fun getOrderedVerticesWithNormalsFromTris(mesh: Mesh, joints: List<Joint>, bindposeJoints: List<Joint>, frameIndex: Int): List<OutVert> {
+        val frame = dataframes[frameIndex]
+        val localJointMatrices = mutableListOf<Matrix4f>()
+        val correctedJointMatrices = mutableListOf<Matrix4f>()
+        for ((i, joint) in joints.withIndex()) {
+            val animJoint = hierarchy[i]
+            val basejoint = bindposeJoints[i]
 
-    fun getAllJointsForInterpolatedFrame(frameIndex: Int): List<Joint>{
-        return hierarchy.withIndex().map{(i, _)->getJointForFrame(i,frameIndex)}
-    }
+            var h = 0
+            val pos = Vector3f(
+                    if (animJoint.flag.and(1) > 0) frame[animJoint.startDataIndex + h++] else basejoint.pos.x,
+                    if (animJoint.flag.and(2) > 0) frame[animJoint.startDataIndex + h++] else basejoint.pos.y,
+                    if (animJoint.flag.and(4) > 0) frame[animJoint.startDataIndex + h++] else basejoint.pos.z
+            )
+            val orient = makeQuaternion(
+                    if (animJoint.flag.and(8) > 0) frame[animJoint.startDataIndex + h++] else basejoint.orient.x,
+                    if (animJoint.flag.and(16) > 0) frame[animJoint.startDataIndex + h++] else basejoint.orient.y,
+                    if (animJoint.flag.and(32) > 0) frame[animJoint.startDataIndex + h++] else basejoint.orient.z
+            )
 
-    fun getDebugVertices(frameIndex: Int ):List<Float>{
-        return hierarchy.withIndex().flatMap{(i, animjoint)->
-            val joint = getJointForFrame(i,frameIndex)
-            if(animjoint.parentIndex<0){
-                listOf(joint.pos.x,joint.pos.y,joint.pos.z,joint.pos.x,joint.pos.y,joint.pos.z)
-            }else {
-                val parent = getJointForFrame(animjoint.parentIndex, 0)
-                listOf(parent.pos.x, parent.pos.y, parent.pos.z, joint.pos.x, joint.pos.y, joint.pos.z)
+            var jointMatrix = Matrix4f().translate(pos).rotate(orient)
+            if (animJoint.parentIndex > -1) {
+                jointMatrix = Matrix4f(localJointMatrices[animJoint.parentIndex]).mul(jointMatrix)
+            }
+            localJointMatrices.add(jointMatrix)
+            correctedJointMatrices.add(Matrix4f(jointMatrix).mul(basejoint.invMatrix))
+
+        }
+
+        return mesh.tris.flatMap { tri ->
+            tri.vertIndexes.map { i ->
+                val vert = mesh.verts[i]
+                val pos = Vector3f()
+                val normal = Vector3f()
+                for (i in vert.startWeight..(vert.startWeight + vert.countWeights - 1)) {
+                    val weight = mesh.weights[i]
+                    val jointMatrix = correctedJointMatrices[weight.jointIndex]
+                    val tmpPos = Vector4f(vert.bindposePosition, 1.0f).mul(jointMatrix).mul(weight.bias)
+                    val tmpNormal = Vector4f(vert.bindposeNormal, 0.0f).mul(jointMatrix).mul(weight.bias)
+                    pos.add(tmpPos.x, tmpPos.y, tmpPos.z)
+                    normal.add(tmpNormal.x, tmpNormal.y, tmpNormal.z)
+                }
+                OutVert(
+                        pos = pos,
+                        normal = normal
+                )
             }
         }
     }
+
+    fun getAllJointsForInterpolatedFrame(frameIndex: Int): List<Joint>{
+        return hierarchy.withIndex().map{ (i, _)->getJointForFrame(i,frameIndex)}
+    }
+
 }
 
 data class AnimJoint (val name:String, val parentIndex:Int, val flag:Short, val startDataIndex:Int){
@@ -117,8 +159,9 @@ data class AnimJoint (val name:String, val parentIndex:Int, val flag:Short, val 
                 if(flag.and(16)>0) frame[startDataIndex+i++] else basejoint.orient.y,
                 if(flag.and(32)>0) frame[startDataIndex+i++] else basejoint.orient.z
         )
-        return Joint(pos =pos, orient = orient)
+        return Joint(pos = pos, orient = orient, invMatrix = null)
     }
+
     fun calculateJointForFrame(frame:List<Float>, basejoint: Joint, parent:Joint?): Joint {
 
         val joint = projectDataframeWithFlags(frame, basejoint).copy()
@@ -128,10 +171,10 @@ data class AnimJoint (val name:String, val parentIndex:Int, val flag:Short, val 
 //            joint.orient.mul(parent.orient)
             val newOrient = Quaternionf(parent.orient)
             newOrient.mul(joint.orient)
-            val response = Joint(pos =joint.pos, orient =newOrient.normalize())
+            val response = Joint(pos = joint.pos, orient = newOrient.normalize(), invMatrix = null)
             return response
         }else{
-            val response = Joint(pos =joint.pos, orient=Quaternionf(-0.5f,-0.5f,-0.5f, -0.5f))
+            val response = Joint(pos = joint.pos, orient = Quaternionf(-0.5f, -0.5f, -0.5f, -0.5f), invMatrix = null)
             return response
         }
 

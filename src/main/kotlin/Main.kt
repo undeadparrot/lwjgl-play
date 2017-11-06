@@ -110,8 +110,8 @@ fun main(args: Array<String>) {
             debugger.addLine(Vector3f(0F,0F,0F), Vector3f(0f,100f,0f))
             debugger.addLine(Vector3f(0F,0F,0F),Vector3f(100f,0f,0f))
             debugger.addLine(Vector3f(0F,0F,0F),Vector3f(0f,0f,100f))
-            renderables[0].renderNormals(debugger)
-            renderables.forEach { x-> x.render(mView,mPerspective) }
+            renderables[0].renderNormals(debugger, frame.toInt())
+            renderables.forEach { x -> x.render(mView, mPerspective, frame.toInt()) }
 
             glfwSwapBuffers(window) // swap the color buffers
             glfwPollEvents()
