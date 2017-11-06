@@ -1,15 +1,23 @@
+import org.joml.Matrix4f
 import org.joml.Quaternionf
 import org.joml.Vector3f
+import org.joml.Vector4f
 import java.io.File
 
 class Md5Loader {
     val meshes = mutableListOf<Mesh>()
-    val joints = mutableListOf<Joint>()
+    val bindposeJoints = mutableListOf<Joint>()
     private var sectionFunc = { x: String -> processTopLevel(x) }
 
     constructor(fname: String) {
         val reader = File(fname).forEachLine { line -> sectionFunc(line.trim().replace('\t',' ')) }
+        meshes.forEach {
+            it.calculateTriangleNormals(bindposeJoints)
+            it.calculateBindposeNormals(bindposeJoints)
+            it.calculateBindposePositions(bindposeJoints)
+        }
     }
+
 
     private fun processTopLevel(line: String) {
         if (line.isNullOrBlank()) {
@@ -60,28 +68,28 @@ class Md5Loader {
         if (tokens[0].contains("}")) {
             sectionFunc = { x: String -> processTopLevel(x) }
         } else {
-
-            joints.add(Joint(
+            val pos = Vector3f(tokens[3].toFloat(), tokens[4].toFloat(), tokens[5].toFloat())
+            val orient = makeQuaternion(tokens[8].toFloat(), tokens[9].toFloat(), tokens[10].toFloat())
+            bindposeJoints.add(Joint(
                     name = tokens[0],
                     parent = tokens[1],
-                    pos = Vector3f(tokens[3].toFloat(), tokens[4].toFloat(), tokens[5].toFloat()),
-                    orient = makeQuaternion(tokens[8].toFloat(), tokens[9].toFloat(), tokens[10].toFloat())
+                    pos = pos,
+                    orient = orient,
+                    invMatrix = Matrix4f().translate(pos).rotate(orient).invert()
             ))
-        }
-    }
-    private fun processNormals(){
-        for (mesh in meshes){
-            for (tri in mesh.tris){
-
-            }
         }
     }
 }
 
-data class Vert(val startWeight: Int, val countWeights: Int) {}
-data class Weight(val jointIndex: Int, val bias: Float, val pos: Vector3f) {}
-data class Tri(val vertIndexes: Array<Int>) {}
-data class Joint(val name: String = "unknown", val parent: String = "unknown", val pos: Vector3f, val orient: Quaternionf) {}
+data class Vert(val startWeight: Int, val countWeights: Int, var bindposeNormal: Vector3f = Vector3f(), var bindposePosition: Vector3f = Vector3f())
+data class OutVert(val pos: Vector3f, val normal: Vector3f)
+data class Weight(val jointIndex: Int, val bias: Float, val pos: Vector3f, val normal: Vector3f = Vector3f())
+data class Tri(val vertIndexes: Array<Int>) {
+    var centroid: Vector3f = Vector3f()
+    var normal: Vector3f = Vector3f()
+}
+
+data class Joint(val name: String = "unknown", val parent: String = "unknown", val pos: Vector3f, val orient: Quaternionf, val invMatrix: Matrix4f?)
 
 class Mesh {
     var shader = "Unknown"
@@ -91,7 +99,7 @@ class Mesh {
     val verts = mutableListOf<Vert>()
     val tris = mutableListOf<Tri>()
     val weights = mutableListOf<Weight>()
-    inline fun getVertexPosition(joints:List<Joint>,vertIndex:Int):Vector3f{
+    inline fun getVertexPosition(joints:List<Joint>, vertIndex:Int):Vector3f{
         val vert = verts[vertIndex]
         val pos = Vector3f()
         for(i in vert.startWeight.rangeTo(vert.startWeight+vert.countWeights-1)){
@@ -104,20 +112,62 @@ class Mesh {
         }
         return pos
     }
+
+    inline fun getVertexNormal(joints: List<Joint>, vertIndex: Int, bindposeJoints: List<Joint>): Vector3f {
+        val vert = verts[vertIndex]
+        val normal = Vector3f(0f, 0f, 0f)
+        for (i in vert.startWeight.rangeTo(vert.startWeight + vert.countWeights - 1)) {
+            val weight = weights[i]
+            val joint = joints[weight.jointIndex]
+            val bpInvMatrix = bindposeJoints[weight.jointIndex].invMatrix
+            val jointMatrix = Matrix4f().translate(joint.pos).rotate(joint.orient).mul(bpInvMatrix)
+            val transformedNormal = Vector4f(vert.bindposeNormal, 0.0f).mul(jointMatrix).normalize().mul(weight.bias)
+            normal.add(transformedNormal.x, transformedNormal.y, transformedNormal.z)
+        }
+        return normal.normalize()
+    }
+
     fun getOrderedVerticesFromTris(joints: List<Joint> ):List<Vector3f>{
         return tris.flatMap { tri -> tri.vertIndexes.map { i -> getVertexPosition(joints,i)} }
     }
-    fun getTriNormals(joints: List<Joint>): List<Vector3f> {
-        return tris.map{ tri ->
-            Vector3f(getVertexPosition(joints, tri.vertIndexes[2]))
-            .sub(getVertexPosition(joints,tri.vertIndexes[0]))
-            .cross(
-                    Vector3f(getVertexPosition(joints,tri.vertIndexes[1]))
-                    .sub(getVertexPosition(joints,tri.vertIndexes[0]))
-            )
+
+    fun calculateTriangleNormals(bindposeJoints: List<Joint>) {
+        tris.forEach {
+            val v1 = getVertexPosition(bindposeJoints, it.vertIndexes[0])
+            val v2 = getVertexPosition(bindposeJoints, it.vertIndexes[1])
+            val v3 = getVertexPosition(bindposeJoints, it.vertIndexes[2])
+            //calculate centre by averaging x,y,z coords
+            it.centroid = Vector3f(v1).add(v2).add(v3).div(3f)
+            //calculate normals
+            it.normal = Vector3f(v2).sub(v1).cross(Vector3f(v3).sub(v1)).normalize()
         }
     }
 
+    fun calculateBindposeNormals(bindposeJoints: List<Joint>) {
+        val vertTriNormals = mutableMapOf<Int, MutableList<Vector3f>>()
+        tris.forEach {
+            with(vertTriNormals) {
+                getOrPut(it.vertIndexes[0], { mutableListOf<Vector3f>() }).add(it.normal)
+                getOrPut(it.vertIndexes[1], { mutableListOf<Vector3f>() }).add(it.normal)
+                getOrPut(it.vertIndexes[2], { mutableListOf<Vector3f>() }).add(it.normal)
+            }
+        }
+        vertTriNormals.forEach { vertIndex, normals ->
+            verts[vertIndex].bindposeNormal =
+                    normals.reduce(Vector3f::add)
+                            .div(normals.size.toFloat())
+                            .normalize()
+
+        }
+    }
+
+    fun calculateBindposePositions(bindposeJoints: List<Joint>) {
+        verts.withIndex().forEach { (vertIndex, vert) ->
+            vert.bindposePosition =
+                    getVertexPosition(bindposeJoints, vertIndex)
+
+        }
+    }
 }
 fun makeQuaternion(x: Float, y: Float, z: Float): Quaternionf {
     val t = 1.0 - (x * x) - (y * y) - (z * z)

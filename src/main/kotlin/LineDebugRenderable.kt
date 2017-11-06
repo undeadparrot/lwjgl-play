@@ -13,16 +13,20 @@ import java.nio.FloatBuffer
 
 
 class LineDebugRenderable:IRenderable {
-    override fun renderNormals(debugger: LineDebugRenderable) {}
+    override fun renderNormals(debugger: LineDebugRenderable, frame: Int) {}
 
     val va : Int
     val vb : Int
     val shaderProgram : ShaderProgram
     val matrixBuffer: FloatBuffer = BufferUtils.createFloatBuffer(16)
     val data = mutableListOf<Float>()
+    val dataMalloc: FloatBuffer
+
+    private val max_size: Int = 30000
+
     constructor() {
 
-        this.shaderProgram = ShaderProgram.fromFilename("basic.v.glsl","basic.f.glsl")
+        this.shaderProgram = ShaderProgram.fromFilename("basic.v.glsl", "debug.f.glsl")
 
         this.va = GL30.glGenVertexArrays()
         GL30.glBindVertexArray(this.va)
@@ -33,6 +37,8 @@ class LineDebugRenderable:IRenderable {
         if(position < 0){throw Exception("Failed to get position attribute for debug shader")}
         GL20.glEnableVertexAttribArray(position)
         glVertexAttribPointer(position,3,GL_FLOAT,false,0,0)
+
+        dataMalloc = MemoryUtil.memAllocFloat(max_size)
 
     }
     override fun cleanup() {
@@ -49,7 +55,7 @@ class LineDebugRenderable:IRenderable {
         data.add(b.z)
     }
 
-    override fun render(viewMatrix: Matrix4f, perspectiveMatrix: Matrix4f) {
+    override fun render(viewMatrix: Matrix4f, perspectiveMatrix: Matrix4f, frame: Int) {
 
         glBindVertexArray(va)
         glBindBuffer(GL_ARRAY_BUFFER,vb)
@@ -66,8 +72,7 @@ class LineDebugRenderable:IRenderable {
     private fun bufferData() {
         glBindVertexArray(va)
         glBindBuffer(GL_ARRAY_BUFFER,vb)
-        val dataMalloc = MemoryUtil.memAllocFloat(data.size)
-        dataMalloc.put(data.toFloatArray()).flip()
+        dataMalloc.put(data.take(max_size).toFloatArray()).flip()
         glBufferData(GL_ARRAY_BUFFER, dataMalloc, GL_STATIC_DRAW)
     }
 
