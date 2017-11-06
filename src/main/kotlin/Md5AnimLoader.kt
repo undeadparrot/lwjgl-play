@@ -97,17 +97,18 @@ class Md5AnimLoader {
         for ((i, joint) in joints.withIndex()) {
             val animJoint = hierarchy[i]
             val basejoint = bindposeJoints[i]
+            val baseframe = baseframe[i]
 
             var h = 0
             val pos = Vector3f(
-                    if (animJoint.flag.and(1) > 0) frame[animJoint.startDataIndex + h++] else basejoint.pos.x,
-                    if (animJoint.flag.and(2) > 0) frame[animJoint.startDataIndex + h++] else basejoint.pos.y,
-                    if (animJoint.flag.and(4) > 0) frame[animJoint.startDataIndex + h++] else basejoint.pos.z
+                    if (animJoint.flag.and(1) > 0) frame[animJoint.startDataIndex + h++] else baseframe.pos.x,
+                    if (animJoint.flag.and(2) > 0) frame[animJoint.startDataIndex + h++] else baseframe.pos.y,
+                    if (animJoint.flag.and(4) > 0) frame[animJoint.startDataIndex + h++] else baseframe.pos.z
             )
             val orient = makeQuaternion(
-                    if (animJoint.flag.and(8) > 0) frame[animJoint.startDataIndex + h++] else basejoint.orient.x,
-                    if (animJoint.flag.and(16) > 0) frame[animJoint.startDataIndex + h++] else basejoint.orient.y,
-                    if (animJoint.flag.and(32) > 0) frame[animJoint.startDataIndex + h++] else basejoint.orient.z
+                    if (animJoint.flag.and(8) > 0) frame[animJoint.startDataIndex + h++] else baseframe.orient.x,
+                    if (animJoint.flag.and(16) > 0) frame[animJoint.startDataIndex + h++] else baseframe.orient.y,
+                    if (animJoint.flag.and(32) > 0) frame[animJoint.startDataIndex + h++] else baseframe.orient.z
             )
 
             var jointMatrix = Matrix4f().translate(pos).rotate(orient)

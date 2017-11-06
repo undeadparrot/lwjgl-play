@@ -26,7 +26,6 @@ class Md5Renderable(val model:Md5Loader, val animator:Md5AnimLoader, val shaderP
                         Vector3f(pos).sub(Vector3f(normal).mul(0.2f))
                 )
             }
-
         }
     }
 

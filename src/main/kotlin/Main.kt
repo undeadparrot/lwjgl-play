@@ -13,7 +13,7 @@ import org.joml.Vector3f
 import org.lwjgl.BufferUtils
 
 
-val obj = ObjLoader("cow2.obj")
+//val obj = ObjLoader("cow2.obj")
 //val bob = Md5Loader("player.md5mesh")
 //val anim = Md5AnimLoader("walk1.md5anim")
 //val bindposeJoints = bob.bindposeJoints
@@ -34,10 +34,10 @@ val primitive = GL_TRIANGLES
 
 val FOV: Float = (Math.toRadians(60.0).toFloat())
 val Z_NEAR = 0.01f
-val Z_FAR = 1000f
+val Z_FAR = 2000f
 
-val anim = Md5AnimLoader("bob_lamp.md5anim")
-val bob = Md5Loader("bob_lamp.md5mesh")
+val anim = Md5AnimLoader("scarry.md5anim")
+val bob = Md5Loader("scarry.md5mesh")
 
 fun main(args: Array<String>) {
     val gamestate = GameState()
@@ -73,11 +73,11 @@ fun main(args: Array<String>) {
 
     println("Running")
 
-    GL.createCapabilities()
+    val capabilities = GL.createCapabilities()
     glClearColor(0.1f, 0.3f, 0.3f, 1f)
     glEnable(GL_DEPTH_TEST)
     var shaderProg: ShaderProgram? = null
-    val gui = Gui(gamestate)
+//    val gui = Gui(gamestate)
     val renderables = mutableListOf<IRenderable>()
     val debugger: LineDebugRenderable
 //    gui.isVisible = true
@@ -93,7 +93,7 @@ fun main(args: Array<String>) {
         while (!glfwWindowShouldClose(window) && gamestate.isRunning) {
 
             val deltaTime = glfwGetTime() - time
-            frame += 0.1
+            frame += 0.5
             if (frame > 119) {
                 frame = 0.01
             }
