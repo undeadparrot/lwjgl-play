@@ -1,10 +1,12 @@
 import org.joml.Matrix4f
+import org.joml.Quaternionf
 import org.joml.Vector2f
 import org.joml.Vector3f
 import org.lwjgl.glfw.GLFW
 import org.lwjgl.glfw.GLFW.GLFW_PRESS
 
 class TrackballManipulator(var mousex: Int, var mousey: Int) : IManipulator {
+
     var isMouseLDown = false
     var isMouseRDown = false
     var acceleration = Vector2f()
@@ -44,6 +46,10 @@ class TrackballManipulator(var mousex: Int, var mousey: Int) : IManipulator {
     override fun onUpdate(deltaTime: Float){
         rotation.add(velocity.x*deltaTime,velocity.y*deltaTime)
         velocity.mul(1F-deceleration*deltaTime,1F-deceleration*deltaTime)
+    }
+
+    override fun getProjectionMatrix(): Matrix4f {
+        return Matrix4f().perspective(Math.toRadians(45.0).toFloat(), 1F, 0.01f, 10.0f)
     }
 
     override fun getViewMatrix(): Matrix4f {

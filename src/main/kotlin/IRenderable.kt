@@ -2,6 +2,7 @@ import org.joml.Matrix4f
 
 interface IRenderable {
     fun cleanup()
-    fun render(viewMatrix: Matrix4f, perspectiveMatrix: Matrix4f, frame: Int = 0)
+    fun render(camera:ICamera, textureManager: TextureManager, lamp:Lamp, frame: Int=0)
+    fun renderShadows(camera:ICamera, textureManager: TextureManager,  frame: Int = 0)
     fun renderNormals(debugger: LineDebugRenderable, frame: Int = 0)
 }

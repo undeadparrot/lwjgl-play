@@ -10,6 +10,8 @@ class Md5AnimLoader {
     val baseframe = mutableListOf<Joint>()
     val dataframes = mutableListOf<MutableList<Float>>()
     val cache = mutableMapOf<Pair<Int,Int>,Joint>()
+    val rootBoneXYZCorrection = Vector3f()
+    var scale = 1f
     private var sectionFunc = { x: String -> processTopLevel(x) }
 
     constructor(fname: String) {
@@ -29,11 +31,18 @@ class Md5AnimLoader {
                 dataframes.add(frame)
                 sectionFunc = { s -> processDataframe(frame, s) }
             }
+            "rootBoneXYZCorrection" -> {
+                val tokens = line.split(" ")
+                rootBoneXYZCorrection.set(Math.toRadians(tokens[1].toDouble()).toFloat(), Math.toRadians(tokens[2].toDouble()).toFloat(), Math.toRadians(tokens[3].toDouble()).toFloat())
+            }
+            "scale" -> {
+                val tokens = line.split(" ")
+                scale = (tokens[1].toFloat())
+            }
         }
     }
 
     private fun processHierarchy(line: String) {
-
         val tokens = line.split(" ")
         if (tokens[0].contains("}")) {
             sectionFunc = { x: String -> processTopLevel(x) }
@@ -90,6 +99,7 @@ class Md5AnimLoader {
         return hierarchy.withIndex().map{ (i, _)->getJointForFrame(i,frameIndex)}
     }
 
+
     fun getOrderedVerticesWithNormalsFromTris(mesh: Mesh, joints: List<Joint>, bindposeJoints: List<Joint>, frameIndex: Int): List<OutVert> {
         val frame = dataframes[frameIndex]
         val localJointMatrices = mutableListOf<Matrix4f>()
@@ -105,12 +115,15 @@ class Md5AnimLoader {
                     if (animJoint.flag.and(2) > 0) frame[animJoint.startDataIndex + h++] else baseframe.pos.y,
                     if (animJoint.flag.and(4) > 0) frame[animJoint.startDataIndex + h++] else baseframe.pos.z
             )
-            val orient = makeQuaternion(
+            var orient = makeQuaternion(
                     if (animJoint.flag.and(8) > 0) frame[animJoint.startDataIndex + h++] else baseframe.orient.x,
                     if (animJoint.flag.and(16) > 0) frame[animJoint.startDataIndex + h++] else baseframe.orient.y,
                     if (animJoint.flag.and(32) > 0) frame[animJoint.startDataIndex + h++] else baseframe.orient.z
             )
-
+            if (animJoint.parentIndex == -1) {
+                //if the model is in some other coordinate system, we can transform the root bone
+                orient.rotateXYZ(this.rootBoneXYZCorrection.x, this.rootBoneXYZCorrection.y, this.rootBoneXYZCorrection.z)
+            }
             var jointMatrix = Matrix4f().translate(pos).rotate(orient)
             if (animJoint.parentIndex > -1) {
                 jointMatrix = Matrix4f(localJointMatrices[animJoint.parentIndex]).mul(jointMatrix)
@@ -127,7 +140,7 @@ class Md5AnimLoader {
                 val normal = Vector3f()
                 for (i in vert.startWeight..(vert.startWeight + vert.countWeights - 1)) {
                     val weight = mesh.weights[i]
-                    val jointMatrix = correctedJointMatrices[weight.jointIndex]
+                    val jointMatrix = Matrix4f(correctedJointMatrices[weight.jointIndex])
                     val tmpPos = Vector4f(vert.bindposePosition, 1.0f).mul(jointMatrix).mul(weight.bias)
                     val tmpNormal = Vector4f(vert.bindposeNormal, 0.0f).mul(jointMatrix).mul(weight.bias)
                     pos.add(tmpPos.x, tmpPos.y, tmpPos.z)
@@ -135,7 +148,8 @@ class Md5AnimLoader {
                 }
                 OutVert(
                         pos = pos,
-                        normal = normal
+                        normal = normal,
+                        uv = vert.textureCoords
                 )
             }
         }

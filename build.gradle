@@ -60,6 +60,10 @@ dependencies {
     runtime "org.lwjgl:lwjgl-stb:$lwjglVersion:$lwjglNatives"
     runtime "org.lwjgl:lwjgl-tinyfd:$lwjglVersion:$lwjglNatives"
     compile "org.joml:joml:${jomlVersion}"
+    compile "org.l33tlabs.twl:pngdecoder:1.0"
+}
+dependencies {
+    compile 'com.google.code.gson:gson:2.8.2'
 }
 buildscript {
     ext.kotlin_version = '1.1.51'

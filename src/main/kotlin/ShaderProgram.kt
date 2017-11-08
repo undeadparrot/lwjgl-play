@@ -1,7 +1,7 @@
 import org.lwjgl.opengl.GL20
 import java.io.File
 
-class ShaderProgram(val fragmentShader:Int, val vertexShader:Int = 0, val program:Int = 0) {
+class ShaderProgram(val fragmentShader:Int, val vertexShader:Int = 0, val programId:Int = 0) {
 
 
     companion object {
@@ -24,9 +24,9 @@ class ShaderProgram(val fragmentShader:Int, val vertexShader:Int = 0, val progra
             GL20.glAttachShader(program, vertexShader)
             GL20.glLinkProgram(program)
             if (GL20.glGetProgrami(program, GL20.GL_LINK_STATUS) == 0) {
-                throw Exception("Error linking program: " + GL20.glGetProgramInfoLog(program))
+                throw Exception("Error linking programId: " + GL20.glGetProgramInfoLog(program))
             }
-            return ShaderProgram(vertexShader=vertexShader,fragmentShader=fragmentShader,program = program)
+            return ShaderProgram(vertexShader=vertexShader,fragmentShader=fragmentShader, programId = program)
         }
         fun fromFilename(vertexSource:String,fragmentSource:String): ShaderProgram {
             return fromSource(vertexSource=File(vertexSource).readText(),fragmentSource=File(fragmentSource).readText())
@@ -38,7 +38,7 @@ class ShaderProgram(val fragmentShader:Int, val vertexShader:Int = 0, val progra
     }
     fun cleanup() {
         println("Deleting shader")
-        GL20.glDeleteProgram(program)
+        GL20.glDeleteProgram(programId)
         GL20.glDeleteShader(vertexShader)
         GL20.glDeleteShader(fragmentShader)
     }

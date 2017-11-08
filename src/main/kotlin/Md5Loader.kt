@@ -1,7 +1,4 @@
-import org.joml.Matrix4f
-import org.joml.Quaternionf
-import org.joml.Vector3f
-import org.joml.Vector4f
+import org.joml.*
 import java.io.File
 
 class Md5Loader {
@@ -41,11 +38,12 @@ class Md5Loader {
         val tokens = line.split(" ")
         when (tokens[0]) {
             "}" -> sectionFunc = { x: String -> processTopLevel(x) }
-            "shader" -> mesh.shader = tokens[1]
+            "shader" -> mesh.shader = tokens[1].trim('"')
             "numverts" -> mesh.numverts = tokens[1].toInt()
             "numtris" -> mesh.numtris = tokens[1].toInt()
             "numweights" -> mesh.numweights = tokens[1].toInt()
             "vert" -> mesh.verts.add(Vert(
+                    textureCoords = Vector2f(tokens[3].toFloat(),tokens[4].toFloat()),
                     startWeight = tokens[6].toInt(),
                     countWeights = tokens[7].toInt()
             ))
@@ -81,8 +79,8 @@ class Md5Loader {
     }
 }
 
-data class Vert(val startWeight: Int, val countWeights: Int, var bindposeNormal: Vector3f = Vector3f(), var bindposePosition: Vector3f = Vector3f())
-data class OutVert(val pos: Vector3f, val normal: Vector3f)
+data class Vert(val startWeight: Int, val countWeights: Int, var bindposeNormal: Vector3f = Vector3f(), var bindposePosition: Vector3f = Vector3f(), val textureCoords: Vector2f)
+data class OutVert(val pos: Vector3f, val normal: Vector3f, val uv: Vector2f)
 data class Weight(val jointIndex: Int, val bias: Float, val pos: Vector3f, val normal: Vector3f = Vector3f())
 data class Tri(val vertIndexes: Array<Int>) {
     var centroid: Vector3f = Vector3f()

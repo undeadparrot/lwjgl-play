@@ -6,6 +6,9 @@ numJoints 110
 frameRate 24
 numAnimatedComponents 157
 
+rootBoneXYZCorrection	-90 0 -90	//
+scale 0.02
+
 hierarchy {
 	"origin"	-1 0 0	//
 	"body"	0 63 0	// origin ( Tx Ty Tz Qx Qy Qz )
